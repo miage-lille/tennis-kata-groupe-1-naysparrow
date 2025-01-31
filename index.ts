@@ -1,11 +1,36 @@
 import { Player } from './types/player';
-import { Point, PointsData, Score } from './types/score';
-// import { none, Option, some, match as matchOpt } from 'fp-ts/Option';
-// import { pipe } from 'fp-ts/lib/function';
+import {
+  Score,
+  PointsData,
+  FortyData,
+  Point,
+  points,
+  forty,
+  game,
+  deuce,
+  advantage,
+} from './types/score';
 
-// -------- Tooling functions --------- //
+// Fonction pour incrémenter les points
+const incrementPoint = (point: Point): Point => {
+  switch (point.kind) {
+    case 'LOVE':
+      return { kind: 'FIFTEEN' };
+    case 'FIFTEEN':
+      return { kind: 'THIRTY' };
+    default:
+      return point;
+  }
+};
 
-export const playerToString = (player: Player) => {
+// Fonction pour vérifier si deux joueurs sont les mêmes
+const isSamePlayer = (player1: Player, player2: Player): boolean => player1 === player2;
+
+// Fonction pour obtenir l'autre joueur
+export const otherPlayer = (player: Player): Player => (player === 'PLAYER_ONE' ? 'PLAYER_TWO' : 'PLAYER_ONE');
+
+// Fonction pour convertir un joueur en chaîne de caractères
+export const playerToString = (player: Player): string => {
   switch (player) {
     case 'PLAYER_ONE':
       return 'Player 1';
@@ -13,50 +38,59 @@ export const playerToString = (player: Player) => {
       return 'Player 2';
   }
 };
-export const otherPlayer = (player: Player) => {
-  switch (player) {
-    case 'PLAYER_ONE':
-      return 'PLAYER_TWO';
-    case 'PLAYER_TWO':
-      return 'PLAYER_ONE';
+
+// Fonction principale score
+export const score = (currentScore: Score, winner: Player): Score => {
+  switch (currentScore.kind) {
+    case 'POINTS':
+      return scoreWhenPoint(currentScore.pointsData, winner);
+    case 'FORTY':
+      return scoreWhenForty(currentScore.fortyData, winner);
+    case 'ADVANTAGE':
+      return scoreWhenAdvantage(currentScore.player, winner);
+    case 'DEUCE':
+      return scoreWhenDeuce(winner);
+    case 'GAME':
+      return scoreWhenGame(winner);
   }
 };
-// Exercice 1 :
-export const pointToString = (point: Point): string =>
-  'You can use pattern matching with switch case pattern.';
 
-export const scoreToString = (score: Score): string =>
-  'You can use pattern matching with switch case pattern.';
-
-export const scoreWhenDeuce = (winner: Player): Score => {
-  throw new Error('not implemented');
-};
-
-export const scoreWhenAdvantage = (
-  advantagedPlayed: Player,
-  winner: Player
-): Score => {
-  throw new Error('not implemented');
-};
-
-export const scoreWhenForty = (
-  currentForty: unknown, // TO UPDATE WHEN WE KNOW HOW TO REPRESENT FORTY
-  winner: Player
-): Score => {
-  throw new Error('not implemented');
-};
-
-export const scoreWhenGame = (winner: Player): Score => {
-  throw new Error('not implemented');
-};
-
-// Exercice 2
-// Tip: You can use pipe function from fp-ts to improve readability.
-// See scoreWhenForty function above.
+// Fonction scoreWhenPoint
 export const scoreWhenPoint = (current: PointsData, winner: Player): Score => {
-  throw new Error('not implemented');
+  const winnerPoint = current[winner];
+  const loserPoint = current[otherPlayer(winner)];
+
+  if (winnerPoint.kind === 'THIRTY') {
+    return forty(winner, loserPoint);
+  }
+
+  return points({
+    ...current,
+    [winner]: incrementPoint(winnerPoint),
+  });
 };
 
-export const score = (currentScore: Score, winner: Player): Score => {
-  throw new Error('not implemented');
+// Fonction scoreWhenGame
+export const scoreWhenGame = (winner: Player): Score => game(winner);
+
+// Fonction scoreWhenDeuce
+export const scoreWhenDeuce = (winner: Player): Score => advantage(winner);
+
+// Fonction scoreWhenAdvantage
+export const scoreWhenAdvantage = (advantagedPlayer: Player, winner: Player): Score => {
+  if (isSamePlayer(advantagedPlayer, winner)) {
+    return game(winner);
+  }
+  return deuce();
+};
+
+// Fonction scoreWhenForty 
+export const scoreWhenForty = (currentForty: FortyData, winner: Player): Score => {
+  if (isSamePlayer(currentForty.player, winner)) {
+    return game(winner);
+  }
+  if (currentForty.otherPoint.kind === 'THIRTY') {
+    return deuce();
+  }
+  return forty(currentForty.player, incrementPoint(currentForty.otherPoint));
 };
